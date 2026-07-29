@@ -1,6 +1,9 @@
 package shims
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 const separator = ","
 
@@ -8,6 +11,10 @@ type label string
 
 func local(value string) string {
 	return value
+}
+
+func localPair(value, suffix string) string {
+	return value + suffix
 }
 
 func Forward(value string) string { // want "avoid a trivial forwarding function"
@@ -99,4 +106,20 @@ func Field(value record) string {
 
 func Underscore(_ string) string {
 	return local("")
+}
+
+func FormatContent(shown int, label string) {
+	fmt.Printf("Showing: %d %s\n", shown, label)
+}
+
+func MessageContent(value string) error {
+	return fmt.Errorf("invalid value: %s", value)
+}
+
+func EmptyLiteral(value string) string { // want "avoid a trivial forwarding function"
+	return strings.TrimPrefix(value, "")
+}
+
+func LocalLiteral(value string) string { // want "avoid a trivial forwarding function"
+	return localPair(value, ".env")
 }

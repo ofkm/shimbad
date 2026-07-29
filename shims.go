@@ -2,6 +2,7 @@ package shimbad
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 
 	"golang.org/x/tools/go/analysis"
@@ -47,7 +48,27 @@ func isTrivialForwardingFunction(pass *analysis.Pass, function functionInfo) boo
 			return false
 		}
 	}
-	return true
+	return !callAddsLiteralContent(pass, call)
+}
+
+// callAddsLiteralContent reports whether the forwarded call targets a function
+// in another package and passes at least one non-empty string literal (e.g. a
+// format string or message). Such a function is the named home for that
+// literal rather than an alias of the callee, so it is not a shim. Same-package
+// calls stay shims regardless: a wrapper that pins a default argument for a
+// sibling function is an alias even when the default is a literal.
+func callAddsLiteralContent(pass *analysis.Pass, call *ast.CallExpr) bool {
+	callee, ok := calledObject(pass, call).(*types.Func)
+	if !ok || callee.Pkg() == nil || callee.Pkg() == pass.Pkg {
+		return false
+	}
+	for _, argument := range call.Args {
+		literal, ok := ast.Unparen(argument).(*ast.BasicLit)
+		if ok && literal.Kind == token.STRING && len(literal.Value) > 2 {
+			return true
+		}
+	}
+	return false
 }
 
 func isComposableCall(
